@@ -1,78 +1,212 @@
-# Voice Agents Examples
+# 🌩️ LiveKit Filler-Aware Interruption Handler  
+### NSUT Assignment — Real-Time Conversational Enhancement
 
-This directory contains a comprehensive collection of voice-based agent examples demonstrating various capabilities and integrations with the LiveKit Agents framework.
+This branch extends the LiveKit real-time voice agent to intelligently distinguish **meaningful user interruptions** from **irrelevant filler speech**, without modifying LiveKit’s core SDK.
 
-## 📋 Table of Contents
+All changes were made in the following file:
 
-### 🚀 Getting Started
+```
+examples/voice_agents/basic_agent.py
+```
 
-- [`basic_agent.py`](./basic_agent.py) - A fundamental voice agent with metrics collection
+---
 
-### 🛠️ Tool Integration & Function Calling
+# 🛠 What Changed
 
-- [`annotated_tool_args.py`](./annotated_tool_args.py) - Using Python type annotations for tool arguments
-- [`dynamic_tool_creation.py`](./dynamic_tool_creation.py) - Creating and registering tools dynamically at runtime
-- [`raw_function_description.py`](./raw_function_description.py) - Using raw JSON schema definitions for tool descriptions
-- [`silent_function_call.py`](./silent_function_call.py) - Executing function calls without verbal responses to user
-- [`long_running_function.py`](./long_running_function.py) - Handling long running function calls with interruption support
+### ✔ Filler-aware interruption filter  
+Filler words are ignored **only when the agent is speaking**, preventing accidental pauses.  
+Ignored fillers (configurable):
 
-### ⚡ Real-time Models
+```
+uh, umm, ummmm, hmm, haan, mm, erm
+```
 
-- [`weather_agent.py`](./weather_agent.py) - OpenAI Realtime API with function calls for weather information
-- [`realtime_video_agent.py`](./realtime_video_agent.py) - Google Gemini with multimodal video and voice capabilities
-- [`realtime_joke_teller.py`](./realtime_joke_teller.py) - Amazon Nova Sonic real-time model with function calls
-- [`realtime_load_chat_history.py`](./realtime_load_chat_history.py) - Loading previous chat history into real-time models
-- [`realtime_turn_detector.py`](./realtime_turn_detector.py) - Using LiveKit's turn detection with real-time models
-- [`realtime_with_tts.py`](./realtime_with_tts.py) - Combining external TTS providers with real-time models
+### ✔ Repetition normalization  
+Handles human variations:
 
-### 🎯 Pipeline Nodes & Hooks
+- `UMMMM` → `um`
+- `UHHHHH` → `uh`
+- `HAAAAN` → `haan`
 
-- [`fast-preresponse.py`](./fast-preresponse.py) - Generating quick responses using the `on_user_turn_completed` node
-- [`flush_llm_node.py`](./flush_llm_node.py) - Flushing partial LLM output to TTS in `llm_node`
-- [`structured_output.py`](./structured_output.py) - Structured data and JSON outputs from agent responses
-- [`speedup_output_audio.py`](./speedup_output_audio.py) - Dynamically adjusting agent audio playback speed
-- [`timed_agent_transcript.py`](./timed_agent_transcript.py) - Reading timestamped transcripts from `transcription_node`
-- [`inactive_user.py`](./inactive_user.py) - Handling inactive users with the `user_state_changed` event hook
-- [`resume_interrupted_agent.py`](./resume_interrupted_agent.py) - Resuming agent speech after false interruption detection
-- [`toggle_io.py`](./toggle_io.py) - Dynamically toggling audio input/output during conversations
+### ✔ Command-based interruption detection  
+Commands force an interruption instantly:
 
-### 🤖 Multi-agent & AgentTask Use Cases
+```
+stop, wait, pause, hold on, excuse me
+```
 
-- [`restaurant_agent.py`](./restaurant_agent.py) - Multi-agent system for restaurant ordering and reservation management
-- [`multi_agent.py`](./multi_agent.py) - Collaborative storytelling with multiple specialized agents
-- [`email_example.py`](./email_example.py) - Using AgentTask to collect and validate email addresses
+### ✔ Low-confidence speech filtering  
+If STT confidence < `MIN_CONF`, speech is treated as background noise.
 
-### 🔗 MCP & External Integrations
+### ✔ Dynamic configuration via `.env`
+Environment variables:
 
-- [`web_search.py`](./web_search.py) - Integrating web search capabilities into voice agents
-- [`langgraph_agent.py`](./langgraph_agent.py) - LangGraph integration
-- [`mcp/`](./mcp/) - Model Context Protocol (MCP) integration examples
-  - [`mcp-agent.py`](./mcp/mcp-agent.py) - MCP agent integration
-  - [`server.py`](./mcp/server.py) - MCP server example
-- [`zapier_mcp_integration.py`](./zapier_mcp_integration.py) - Automating workflows with Zapier through MCP
+```
+IGNORED_WORDS
+INTERRUPT_COMMANDS
+MIN_CONF
+```
 
-### 💾 RAG & Knowledge Management
+### ✔ Windows-safe signal override  
+Prevents:
 
-- [`llamaindex-rag/`](./llamaindex-rag/) - Complete RAG implementation with LlamaIndex
-  - [`chat_engine.py`](./llamaindex-rag/chat_engine.py) - Chat engine integration
-  - [`query_engine.py`](./llamaindex-rag/query_engine.py) - Query engine used in a function tool
-  - [`retrieval.py`](./llamaindex-rag/retrieval.py) - Document retrieval
+```
+ValueError: signal only works in main thread of the main interpreter
+```
 
-### 🎵 Specialized Use Cases
+Patch:
 
-- [`background_audio.py`](./background_audio.py) - Playing background audio or ambient sounds during conversations
-- [`push_to_talk.py`](./push_to_talk.py) - Push-to-talk interaction
-- [`tts_text_pacing.py`](./tts_text_pacing.py) - Pacing control for TTS requests
-- [`speaker_id_multi_speaker.py`](./speaker_id_multi_speaker.py) - Multi-speaker identification
+```python
+if platform.system() == "Windows":
+    signal.signal = lambda *args, **kwargs: None
+```
 
-### 📊 Tracing & Error Handling
+### ✔ Rich logs for debugging  
+The agent logs all decisions:
 
-- [`langfuse_trace.py`](./langfuse_trace.py) - LangFuse integration for conversation tracing
-- [`error_callback.py`](./error_callback.py) - Error handling callback
-- [`session_close_callback.py`](./session_close_callback.py) - Session lifecycle management
+```
+[IGNORED FILLER]
+[REAL INTERRUPTION]
+[VALID INTERRUPTION]
+[REGISTERED SPEECH]
+[LOW CONF SPEECH IGNORED]
+```
 
-## 📖 Additional Resources
+---
 
-- [LiveKit Agents Documentation](https://docs.livekit.io/agents/)
-- [Agents Starter Example](https://github.com/livekit-examples/agent-starter-python)
-- [More Agents Examples](https://github.com/livekit-examples/python-agents-examples)
+# 🧪 Log Samples (Real References)
+
+Below are **actual sample logs** produced during testing for reference:
+
+```
+01:32:21 INFO   livekit.agents   STT metrics {"room": "playground-0VVK-GKZ2",
+                                             "model_name": "flux-general-en",
+                                             "model_provider": "Deepgram",
+                                             "audio_duration": 0.6}
+
+01:32:22 DEBUG  livekit.agents   received user transcript {"room": "playground-0VVK-GKZ2",
+                                                           "user_transcript": "Thanks, Kelly.",
+                                                           "language": "en",
+                                                           "transcript_delay": 0.0453}
+
+01:32:23 INFO   livekit.agents   LLM metrics {"room": "playground-0VVK-GKZ2",
+                                             "model_name": "llama-3.3-70b-versatile",
+                                             "model_provider": "api.groq.com",
+                                             "ttft": 0.29,
+                                             "completion_tokens": 10}
+
+01:32:24 DEBUG  livekit.plugins.eou  prediction {"room": "playground-0VVK-GKZ2",
+                                                "eou_probability": 0.55,
+                                                "duration": 0.452}
+
+01:32:25 INFO   livekit.agents   TTS metrics {"room": "playground-0VVK-GKZ2",
+                                             "model_name": "eleven_multilingual_v2",
+                                             "audio_duration": 1.52}
+
+01:32:31 INFO   livekit.agents   STT metrics {"room": "playground-0VVK-GKZ2",
+                                             "model_name": "flux-general-en",
+                                             "audio_duration": 5.0}
+```
+
+These logs help confirm:
+- STT is running  
+- TTS is generating  
+- LLM responses are streaming  
+- EOU predictions are active  
+- Transcript handler is firing  
+
+---
+
+# ▶️ Steps to Run
+
+### 1. Activate the environment
+```
+.venv\Scripts\activate
+```
+
+### 2. Start the agent
+```
+python examples/voice_agents/basic_agent.py console/dev/start
+```
+
+### 3. Join the room  
+Use LiveKit Cloud → open the room in browser (Only for dev & start mode)
+
+---
+
+# 🧪 Steps to Test Interruption Behavior
+
+### **Filler while agent speaking (should be ignored):**
+```
+umm
+hmm
+ummmmm
+haan
+```
+Expected:
+```
+[IGNORED FILLER]
+```
+
+---
+
+### **Real interruption:**
+```
+stop
+wait
+pause
+hold on
+```
+Expected:
+Agent stops immediately.
+
+---
+
+### **Mixed filler + command:**
+```
+umm okay stop
+```
+Expected:
+```
+[REAL INTERRUPTION]
+```
+
+---
+
+### **Background noise / mumbling:**
+Expected:
+```
+[LOW CONF SPEECH IGNORED]
+```
+
+---
+
+### **Filler when agent is silent:**
+```
+umm
+```
+Expected:
+```
+[REGISTERED SPEECH]
+```
+
+---
+
+# 🌍 Environment Details
+
+| Component | Configuration |
+|----------|---------------|
+| STT | Deepgram `flux-general-en` |
+| LLM | Groq `llama-3.3-70b-versatile` |
+| TTS | ElevenLabs `eleven_turbo_v2` |
+| VAD | Silero |
+| Turn Detection | LiveKit Multilingual |
+| OS | Windows (patched), Linux, macOS |
+| Python | 3.10+ |
+
+---
+
+# 🏁 Conclusion
+
+This implementation enhances the LiveKit voice agent with **precision interruption handling**, supporting dynamic filler filtering, command detection, low-confidence suppression, and Windows-safe execution—mirroring natural human conversation flow.
+
