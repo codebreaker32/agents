@@ -1,6 +1,9 @@
 import logging
 import os
 import re
+import platform
+import signal
+import asyncio
 from dotenv import load_dotenv
 
 from livekit.agents import (
@@ -16,17 +19,16 @@ from livekit.agents import (
 )
 
 from livekit.plugins import groq, elevenlabs, deepgram, silero
-from livekit.agents.llm import function_tool
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 logger = logging.getLogger("interrupt-agent")
 load_dotenv()
 
-import platform, signal
-
+# Windows fix
 if platform.system() == "Windows":
     signal.signal = lambda *args, **kwargs: None
 
+# Filler + command normalization
 IGNORED_WORDS = {
     re.sub(r"(.)\1+", r"\1", w.strip().lower())
     for w in os.getenv("IGNORED_WORDS", "uh,umm,ummm,hmm,haan,erm,mm").split(",")
@@ -41,33 +43,29 @@ MIN_CONF = float(os.getenv("MIN_CONF", 0.60))
 
 
 def normalize_words(text: str):
-    # Lowercase everything
-    text = text.lower()
-
-    # Remove punctuation like "UMM??", "HMM!", "UH-HUH"
-    text = re.sub(r"[^\w\s]", "", text)
-
-  
+    """Lowercase, remove punctuation, collapse repeated letters."""
+    text = re.sub(r"[^\w\s]", "", text.lower())
     text = re.sub(r"(.)\1+", r"\1", text)
-
-    # Return split words
     return text.split()
 
 
-def is_only_fillers(words: list[str]) -> bool:
+def is_only_fillers(words):
     return all(w in IGNORED_WORDS for w in words)
 
 
-def contains_interrupt_command(words: list[str]) -> bool:
+def contains_interrupt_command(words):
     return any(w in INTERRUPT_COMMANDS for w in words)
 
 
+# -------------------------------------------------------------------
+# Agent Definition (No weather tool)
+# -------------------------------------------------------------------
 
 class MyAgent(Agent):
     def __init__(self):
         super().__init__(
             instructions=(
-                "Your name is Kelly. "
+                "Your name is Lilly, a friendly voice assistant. "
                 "You speak using voice only. "
                 "Keep responses short and clear. "
                 "No emojis. Friendly, witty, slightly curious."
@@ -76,13 +74,6 @@ class MyAgent(Agent):
 
     async def on_enter(self):
         self.session.generate_reply()
-
-    @function_tool
-    async def lookup_weather(
-        self, context: RunContext, location: str, latitude: str, longitude: str
-    ):
-        logger.info(f"Looking up weather for {location}")
-        return "sunny with a temperature around seventy degrees."
 
 
 
@@ -94,14 +85,11 @@ async def entrypoint(ctx: JobContext):
             model="flux-general-en",
             eager_eot_threshold=0.3,
         ),
-
         llm=groq.LLM(model="llama-3.3-70b-versatile"),
-
         tts=elevenlabs.TTS(
             model="eleven_turbo_v2",
-            voice_id="ODq5zmih8GrVes37Dizd",
+            voice_id="pFZP5JQG7iQjIQuC4Bku",
         ),
-
         vad=silero.VAD.load(),
         turn_detection=MultilingualModel(),
 
@@ -110,7 +98,6 @@ async def entrypoint(ctx: JobContext):
         false_interruption_timeout=1.0,
     )
 
-
     @session.on("user_transcript")
     def _handle_speech(ev):
         if not ev.transcript:
@@ -118,36 +105,37 @@ async def entrypoint(ctx: JobContext):
 
         words = normalize_words(ev.transcript)
 
-        # CASE 1 — Agent silent → everything is valid speech
+        # Agent is idle → don't apply interruption filters
         if not session.is_speaking:
-            logger.info(f"[REGISTERED SPEECH] '{ev.transcript}' (agent idle)")
+            logger.info(f"[REGISTERED SPEECH] '{ev.transcript}' (idle)")
             return
 
-        # CASE 2 — Mixed filler + command → REAL interruption
+        # 1. Hard STOP command
         if contains_interrupt_command(words):
-            logger.info(f"[REAL INTERRUPTION] '{ev.transcript}' → STOP AGENT")
+            logger.info(f"[REAL INTERRUPTION] '{ev.transcript}' → FULL STOP")
+            session.interrupt()
+            ev.stop_propagation()    
             return
 
-        # CASE 3 — Pure fillers → ignore
+        # 2. Fillers
         if is_only_fillers(words):
-            logger.info(f"[IGNORED FILLER] '{ev.transcript}' (normalized={words})")
+            logger.info(f"[IGNORED FILLER] '{ev.transcript}' ({words})")
             ev.stop_propagation()
             return
 
-        # CASE 4 — Low-confidence noise → ignore
+        # 3. Low confidence = ignore
         if ev.confidence is not None and ev.confidence < MIN_CONF:
             logger.info(
-                f"[LOW CONF SPEECH IGNORED] '{ev.transcript}' "
-                f"(normalized={words}, conf={ev.confidence})"
+                f"[LOW CONF SPEECH IGNORED] '{ev.transcript}' (words={words}, conf={ev.confidence})"
             )
             ev.stop_propagation()
             return
 
-        # CASE 5 — Everything else → real interruption
+        # 4. Real interruption
         logger.info(f"[VALID INTERRUPTION] '{ev.transcript}' (words={words})")
-        return
+        return  # allow interruption
 
-
+    # Usage metrics
     usage_collector = metrics.UsageCollector()
 
     @session.on("metrics_collected")
@@ -160,14 +148,11 @@ async def entrypoint(ctx: JobContext):
 
     ctx.add_shutdown_callback(log_usage)
 
-    # Start Agent
-
     await session.start(
         agent=MyAgent(),
         room=ctx.room,
         room_options=room_io.RoomOptions(),
     )
-
 
 
 if __name__ == "__main__":
