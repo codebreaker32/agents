@@ -6,7 +6,7 @@ The system distinguishes **meaningful user interruptions** from **irrelevant fil
 All changes were implemented in:
 
 ```
-examples/voice_agents/basic_agent.py
+examples\voice_agents\basic_agent.py
 examples\voice_agents\README.md
 README.md
 ```
