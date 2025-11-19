@@ -40,10 +40,6 @@ INTERRUPT_COMMANDS = {
 MIN_CONF = float(os.getenv("MIN_CONF", 0.60))
 
 
-# ---------------------------------------------------------
-# Normalization Utilities
-# ---------------------------------------------------------
-
 def normalize_words(text: str):
     # Lowercase everything
     text = text.lower()
