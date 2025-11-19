@@ -7,6 +7,8 @@ All changes were implemented in:
 
 ```
 examples/voice_agents/basic_agent.py
+examples\voice_agents\README.md
+README.md
 ```
 
 ---
@@ -103,12 +105,17 @@ Verified through manual testing:
 
 # 🧪 Steps to Test  
 
-## 1. Start the Agent  
+## 1. Install the dependencies
+```
+pip install -r examples/voice_agents/requirements.txt
+```
+
+## 2. Start the Agent  
 ```
 python examples/voice_agents/basic_agent.py console[/dev][/start]
 ```
 
-## 2. Join Room  
+## 3. Join Room  
 Use LiveKit Cloud → open room in browser with microphone enabled.( Only for dev or start mode)
 
 ---
@@ -305,15 +312,7 @@ Real logs captured during testing:
              INFO   livekit.agents   LLM metrics {"room": "mock_room", "model_name": "llama-3.3-70b-versatile",      
                                                  "model_provider": "api.groq.com", "ttft": 0.21, "prompt_tokens":    
                                                  329, "prompt_cached_tokens": 0, "completion_tokens": 7,             
-                                                 "tokens_per_second": 31.04}                                         
-             DEBUG  livekit.plugins… eou prediction {"room": "mock_room", "eou_probability": 0.018806207925081253,   
-                                                    "duration": 0.223, "input": "<|im_start|>assistant\nwhat's on    
-                                                    your mind<|im_end|>\n<|im_start|>user\nit will be                
-                                                    small<|im_end|>\n<|im_start|>assistant\nthat's a good start what 
-                                                    is                                                               
-                                                    it<|im_end|>\n<|im_start|>user\nyou<|im_end|>\n<|im_start|>assis…
-                                                    want to know something about me i'm                              
-                                                    kelly<|im_end|>\n<|im_start|>user\nstop"}                        
+                                                 "tokens_per_second": 31.               
              DEBUG  livekit.agents   using preemptive generation {"room": "mock_room", "preemptive_lead_time":       
                                                                  0.29549264907836914}                                
              INFO   livekit.agents   EOU metrics {"room": "mock_room", "model_name": "multilingual",                 
@@ -356,6 +355,7 @@ Set these in `.env`:
 IGNORED_WORDS=uh,umm,ummm,hmm,haan,erm,mm
 INTERRUPT_COMMANDS=stop,wait,pause,hold on,excuse me
 MIN_CONF=0.60
+and related API KEYS
 ```
 
 ---
@@ -364,4 +364,4 @@ MIN_CONF=0.60
 This implementation delivers a **smart, human-like interruption system** for LiveKit voice agents.  
 Filler speech is ignored intelligently, commands are recognized instantly, and noise is filtered — making conversations smoother and more natural.
 
-This README and the updated module complete the NSUT LiveKit Voice Interruption Handling assignment.
+References:https://docs.livekit.io/agents/

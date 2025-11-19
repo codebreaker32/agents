@@ -105,12 +105,17 @@ Verified through manual testing:
 
 # 🧪 Steps to Test  
 
-## 1. Start the Agent  
+## 1. Install the dependencies
+```
+pip install -r examples/voice_agents/requirements.txt
+```
+
+## 2. Start the Agent  
 ```
 python examples/voice_agents/basic_agent.py console[/dev][/start]
 ```
 
-## 2. Join Room  
+## 3. Join Room  
 Use LiveKit Cloud → open room in browser with microphone enabled.( Only for dev or start mode)
 
 ---
