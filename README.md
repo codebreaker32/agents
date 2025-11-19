@@ -16,7 +16,7 @@ README.md
 # 🛠 What Changed  
 ### Overview of New Modules, Parameters, and Logic
 
-#### ✔ 1. Filler Interruption Layer  
+### ✔ 1. Filler Interruption Layer  
 A full interruption-handling system was added inside the LiveKit event loop using:
 
 ```
@@ -30,7 +30,7 @@ This layer:
 - suppresses low-confidence noise  
 - handles mixed filler + command cases correctly  
 
-#### ✔ 2. Normalization Utilities  
+### ✔ 2. Normalization Utilities  
 New logic sanitizes STT transcripts:
 - Converted to lowercase  
 - Removed punctuation  
@@ -38,7 +38,7 @@ New logic sanitizes STT transcripts:
 
 This makes the filler detection robust across accents and noisy speech.
 
-#### ✔ 3. Dynamic Configuration (via `.env`)  
+### ✔ 3. Dynamic Configuration (via `.env`)  
 Parameters added:
 
 ```
@@ -46,16 +46,16 @@ IGNORED_WORDS
 INTERRUPT_COMMANDS
 MIN_CONF
 ```
-
+(.env.example is attached)
 Allows runtime updates without editing code.
 
-#### ✔ 4. Low-Confidence Noise Filtering  
+### ✔ 4. Low-Confidence Noise Filtering  
 If STT confidence < `MIN_CONF`, the speech is ignored:
 ```
 [LOW CONF SPEECH IGNORED]
 ```
 
-#### ✔ 5. Windows Signal Patch  
+### ✔ 5. Windows Signal Patch  
 LiveKit workers crash on Windows due to signal handling.  
 Added:
 
@@ -65,6 +65,42 @@ if platform.system() == "Windows":
 ```
 
 Ensures stable execution.
+
+## ✔ 6. Behavior Details (Important)
+
+#### 1.  Interruption Uses session.interrupt()
+
+When an interruption command is detected:
+
+- Ongoing TTS halts
+
+- Pending LLM generation cancels
+
+- Audio flushes
+
+- Agent waits for EOU before replying
+
+The result: zero overlapping speech.
+
+#### 2. Filler Ignored Using ev.stop_propagation()
+
+If filler is detected while the agent is speaking:
+
+```
+ev.stop_propagation()
+```
+
+This prevents the event from reaching:
+
+- EOU detector
+
+- LLM
+
+- Interruption manager
+
+- Any downstream handlers
+
+Meaning filler simply vanishes.
 
 #### ✔ 6. Enhanced Logging  
 All decisions are clearly logged:
@@ -99,7 +135,7 @@ Verified through manual testing:
 - Very noisy environments may require increasing `MIN_CONF`  
 - LiveKit Playground does **not** forward transcript events to agents  
   → local execution required for interruption testing  
-- Multi-language filler lists not yet added (optional future work)  
+- EOU may be further enhanced
 
 ---
 
