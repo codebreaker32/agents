@@ -1,5 +1,4 @@
 # 🌩️ LiveKit Filler-Aware Interruption Handler  
-### NSUT Assignment — Real-Time Conversational Enhancement
 
 This branch extends the LiveKit real-time voice agent to intelligently distinguish **meaningful user interruptions** from **irrelevant filler speech**, without modifying LiveKit’s core SDK.
 
